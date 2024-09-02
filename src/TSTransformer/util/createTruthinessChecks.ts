@@ -7,6 +7,7 @@ import { isEmptyStringType, isNaNType, isNumberLiteralType, isPossiblyType } fro
 import ts from "typescript";
 
 export function willCreateTruthinessChecks(type: ts.Type) {
+	return false;
 	return (
 		isPossiblyType(type, isNumberLiteralType(0)) ||
 		isPossiblyType(type, isNaNType) ||
@@ -15,6 +16,8 @@ export function willCreateTruthinessChecks(type: ts.Type) {
 }
 
 export function createTruthinessChecks(state: TransformState, exp: luau.Expression, node: ts.Expression) {
+	return exp;
+
 	const type = state.getType(node);
 	const isAssignableToZero = isPossiblyType(type, isNumberLiteralType(0));
 	const isAssignableToNaN = isPossiblyType(type, isNaNType);

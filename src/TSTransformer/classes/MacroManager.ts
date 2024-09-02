@@ -1,3 +1,5 @@
+import luau from "@roblox-ts/luau-ast";
+import path from "path";
 import { ProjectError } from "Shared/errors/ProjectError";
 import { assert } from "Shared/util/assert";
 import { CALL_MACROS } from "TSTransformer/macros/callMacros";
@@ -95,10 +97,13 @@ export class MacroManager {
 	private symbols = new Map<string, ts.Symbol>();
 	private identifierMacros = new Map<ts.Symbol, IdentifierMacro>();
 	private callMacros = new Map<ts.Symbol, CallMacro>();
+	private customCallMacros = new Map<ts.Symbol, CallMacro>();
 	private constructorMacros = new Map<ts.Symbol, ConstructorMacro>();
 	private propertyCallMacros = new Map<ts.Symbol, PropertyCallMacro>();
+	private customPropertyCallMacros = new Map<ts.Symbol, PropertyCallMacro>();
+	private readonly methodMap = new Map<string, ReadonlyMap<string, ts.Symbol>>();
 
-	constructor(typeChecker: ts.TypeChecker) {
+	constructor(private readonly typeChecker: ts.TypeChecker) {
 		for (const [name, macro] of Object.entries(IDENTIFIER_MACROS)) {
 			const symbol = getGlobalSymbolByNameOrThrow(typeChecker, name, ts.SymbolFlags.Variable);
 			this.identifierMacros.set(symbol, macro);
@@ -141,6 +146,8 @@ export class MacroManager {
 				}
 				this.propertyCallMacros.set(methodSymbol, macro);
 			}
+
+			this.methodMap.set(symbol.name, methodMap);
 		}
 
 		for (const symbolName of Object.values(SYMBOL_NAMES)) {
@@ -180,7 +187,7 @@ export class MacroManager {
 	}
 
 	public getCallMacro(symbol: ts.Symbol) {
-		return this.callMacros.get(symbol);
+		return this.callMacros.get(symbol) ?? this.customCallMacros.get(symbol);
 	}
 
 	public getConstructorMacro(symbol: ts.Symbol) {
@@ -188,7 +195,7 @@ export class MacroManager {
 	}
 
 	public getPropertyCallMacro(symbol: ts.Symbol) {
-		const macro = this.propertyCallMacros.get(symbol);
+		const macro = this.propertyCallMacros.get(symbol) ?? this.customPropertyCallMacros.get(symbol);
 		if (
 			!macro &&
 			symbol.parent &&
@@ -198,5 +205,99 @@ export class MacroManager {
 			assert(false, `Macro ${symbol.parent.name}.${symbol.name}() is not implemented!`);
 		}
 		return macro;
+	}
+
+	public addCallMacrosFromFiles(files: ReadonlyArray<ts.SourceFile>) {
+		const addMacro = (name: ts.Identifier, file: ts.SourceFile) => {
+			const smb = getGlobalSymbolByNameOrThrow(this.typeChecker, name.text, ts.SymbolFlags.Function);
+			const pth = path.relative("src", file.path);
+
+			const macro: CallMacro = (state, node, expression, args) => {
+				const identifier = state.customLib(node, pth, name.text);
+				return luau.call(identifier, args);
+			};
+
+			this.customCallMacros.set(smb, macro);
+		};
+		const isExported = (node: ts.ModuleDeclaration | ts.FunctionDeclaration | ts.VariableStatement) =>
+			node.modifiers?.find(ts.isExportModifier) !== undefined;
+
+		for (const file of files) {
+			if (!file.path.includes(".callmacro.")) continue;
+
+			for (const statement of file.statements) {
+				if (ts.isFunctionDeclaration(statement)) {
+					if (!isExported(statement)) continue;
+					if (!statement.name) continue;
+
+					const name = statement.name;
+					addMacro(name, file);
+				}
+			}
+		}
+	}
+	public addPropertyMacrosFromFiles(files: ReadonlyArray<ts.SourceFile>) {
+		const addMacro = (
+			declarationName: ts.Identifier,
+			propertyName: ts.Identifier,
+			type: ts.Identifier,
+			file: ts.SourceFile,
+		) => {
+			const smb = this.methodMap.get(type.text)?.get(propertyName.text);
+			assert(smb);
+
+			const pth = path.relative("src", file.path);
+
+			const macro: CallMacro = (state, node, expression, args) => {
+				const identifier =
+					state.sourceFile.fileName === file.fileName
+						? luau.create(luau.SyntaxKind.Identifier, { name: declarationName.text })
+						: state.customLib(node, pth, declarationName.text);
+
+				return luau.call(luau.property(identifier, propertyName.text), [expression, ...args]);
+			};
+
+			this.customPropertyCallMacros.set(smb, macro);
+		};
+		const isExported = (node: ts.ModuleDeclaration | ts.FunctionDeclaration | ts.VariableStatement) =>
+			node.modifiers?.find(ts.isExportModifier) !== undefined;
+
+		for (const file of files) {
+			if (!file.path.includes(".propmacro.")) continue;
+
+			for (const statement of file.statements) {
+				if (ts.isVariableStatement(statement)) {
+					if (!isExported(statement)) continue;
+
+					for (const declaration of statement.declarationList.declarations) {
+						if (!ts.isIdentifier(declaration.name)) continue;
+
+						if (!declaration.type || !ts.isTypeReferenceNode(declaration.type)) continue;
+						if (!ts.isIdentifier(declaration.type.typeName)) continue;
+						if (declaration.type.typeName.text !== "PropertyMacros") continue;
+						if (!declaration.type.typeArguments) continue;
+						if (declaration.type.typeArguments.length !== 1) continue;
+
+						if (!declaration.initializer || !ts.isObjectLiteralExpression(declaration.initializer)) {
+							continue;
+						}
+
+						const type = declaration.type.typeArguments[0];
+						if (!ts.isTypeReferenceNode(type)) continue;
+						if (!ts.isIdentifier(type.typeName)) continue;
+
+						const declarationName = declaration.name;
+
+						for (const prop of declaration.initializer.properties) {
+							if (!ts.isPropertyAssignment(prop)) continue;
+							if (!prop.name || !ts.isIdentifier(prop.name)) continue;
+							if (!ts.isArrowFunction(prop.initializer)) continue;
+
+							addMacro(declarationName, prop.name, type.typeName, file);
+						}
+					}
+				}
+			}
+		}
 	}
 }

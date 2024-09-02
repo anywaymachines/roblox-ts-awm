@@ -5,6 +5,7 @@ import { assert } from "Shared/util/assert";
 import { TransformState } from "TSTransformer";
 import { transformIdentifierDefined } from "TSTransformer/nodes/expressions/transformIdentifier";
 import { transformStatementList } from "TSTransformer/nodes/transformStatementList";
+import { getImportParts } from "TSTransformer/util/createImportExpression";
 import { getOriginalSymbolOfNode } from "TSTransformer/util/getOriginalSymbolOfNode";
 import { isSymbolMutable } from "TSTransformer/util/isSymbolMutable";
 import { isSymbolOfValue } from "TSTransformer/util/isSymbolOfValue";
@@ -225,8 +226,26 @@ export function transformSourceFile(state: TransformState, node: ts.SourceFile) 
 	luau.list.push(headerStatements, luau.comment(` Compiled with roblox-ts v${COMPILER_VERSION}`));
 
 	// add the Runtime library to the tree if it is used
-	if (state.usesRuntimeLib) {
+	if (state.usesRuntimeLib || state.customLibs.size > 0) {
 		luau.list.push(headerStatements, state.createRuntimeLibImport(node));
+	}
+	for (const [path, names] of state.customLibs) {
+		const specifier = ts.factory.createStringLiteral(path);
+		(specifier as { parent: ts.Node }).parent = node.getSourceFile();
+
+		for (const name of names) {
+			const ex = luau.create(luau.SyntaxKind.VariableDeclaration, {
+				left: luau.list.make(luau.create(luau.SyntaxKind.Identifier, { name })),
+				right: luau.property(
+					luau.call(state.TS(state.sourceFile, "import"), [
+						luau.globals.script,
+						...getImportParts(state, node.getSourceFile(), specifier),
+					]),
+					name,
+				),
+			});
+			luau.list.push(headerStatements, ex);
+		}
 	}
 
 	// extract Luau directive comments like --!strict so we can put them before headerStatements

@@ -147,6 +147,8 @@ export function compileFiles(
 
 	const typeChecker = proxyProgram.getTypeChecker();
 	const services = createTransformServices(typeChecker);
+	services.macroManager.addCallMacrosFromFiles(program.getSourceFiles());
+	services.macroManager.addPropertyMacrosFromFiles(program.getSourceFiles());
 
 	for (let i = 0; i < sourceFiles.length; i++) {
 		const sourceFile = proxyProgram.getSourceFile(sourceFiles[i].fileName);

@@ -1,5 +1,7 @@
 import luau from "@roblox-ts/luau-ast";
+import { errors } from "Shared/diagnostics";
 import { assert } from "Shared/util/assert";
+import { DiagnosticService } from "TSTransformer/classes/DiagnosticService";
 import { TransformState } from "TSTransformer/classes/TransformState";
 import { MacroList, PropertyCallMacro } from "TSTransformer/macros/types";
 import { convertToIndexableExpression } from "TSTransformer/util/convertToIndexableExpression";
@@ -155,6 +157,29 @@ function argumentsWithDefaults(
 
 	return args;
 }
+
+const FUNCTION_METHODS: MacroList<PropertyCallMacro> = {
+	asArrow: (state, node, expression) => expression,
+	bind: (state, node, expression, args) => {
+		if (
+			expression.kind !== luau.SyntaxKind.TemporaryIdentifier &&
+			expression.kind !== luau.SyntaxKind.PropertyAccessExpression
+		) {
+			DiagnosticService.addDiagnostic(errors.useMethodOnly(node));
+			return luau.none();
+		}
+
+		return luau.create(luau.SyntaxKind.FunctionExpression, {
+			parameters: luau.list.make(),
+			statements: luau.list.make(
+				luau.create(luau.SyntaxKind.ReturnStatement, {
+					expression: luau.call(expression, [...args, luau.create(luau.SyntaxKind.VarArgsLiteral, {})]),
+				}),
+			),
+			hasDotDotDot: true,
+		});
+	},
+};
 
 const ARRAY_LIKE_METHODS: MacroList<PropertyCallMacro> = {
 	size: (state, node, expression) => luau.unary("#", expression),
@@ -927,6 +952,7 @@ export const PROPERTY_CALL_MACROS: { [className: string]: MacroList<PropertyCall
 	Vector3int16: makeMathSet("+", "-", "*", "/"),
 	Number: makeMathSet("//"),
 
+	Function: FUNCTION_METHODS,
 	String: STRING_CALLBACKS,
 	ArrayLike: ARRAY_LIKE_METHODS,
 	ReadonlyArray: READONLY_ARRAY_METHODS,

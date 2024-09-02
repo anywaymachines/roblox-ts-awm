@@ -58,4 +58,25 @@ export const CALL_MACROS: MacroList<CallMacro> = {
 		// converts the flat array into { root, { "rest", "of", "path" } }
 		return luau.array([parts.shift()!, luau.array(parts)]);
 	},
+
+	$compileTime: () => luau.number(Date.now() / 1000),
+
+	asObject: (state, node, expression, args) => args[0],
+	asMap: (state, node, expression, args) => args[0],
+	asSet: (state, node, expression, args) => args[0],
+	asArray: (state, node, expression, args) => args[0],
+
+	firstValue: (state, node, expression, args) => {
+		return luau.create(luau.SyntaxKind.ParenthesizedExpression, {
+			expression: luau.call(luau.create(luau.SyntaxKind.Identifier, { name: "select" }), [
+				luau.number(2),
+				luau.call(luau.create(luau.SyntaxKind.Identifier, { name: "next" }), [args[0]]),
+			]),
+		});
+	},
+	firstKey: (state, node, expression, args) => {
+		return luau.create(luau.SyntaxKind.ParenthesizedExpression, {
+			expression: luau.call(luau.create(luau.SyntaxKind.Identifier, { name: "next" }), [args[0]]),
+		});
+	},
 };

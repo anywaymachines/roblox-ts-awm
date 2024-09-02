@@ -6,11 +6,11 @@
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
-	"keywords": [],
+	"keywords": [ ],
 	"author": "",
 	"license": "ISC",
 	"dependencies": {
-		"@rbxts/compiler-types": "github:roblox-ts/compiler-types",
+		"@rbxts/compiler-types": "github:i3ym/roblox-ts-compiler-types-pe",
 		"@rbxts/roact": "github:roblox-ts/roact",
 		"@rbxts/services": "^1.5.3",
 		"@rbxts/testez": "^0.4.2-ts.0",

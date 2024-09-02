@@ -13,10 +13,29 @@ export function addIndexDiagnostics(
 	expType: ts.Type,
 ) {
 	const symbol = getFirstDefinedSymbol(state, expType);
+
+	const up = skipUpwards(node);
+
 	if (
 		(symbol && state.services.macroManager.getPropertyCallMacro(symbol)) ||
-		(!isValidMethodIndexWithoutCall(state, skipUpwards(node)) && isMethod(state, node))
+		(!isValidMethodIndexWithoutCall(state, up) && isMethod(state, node))
 	) {
+		let parent = up;
+		while (true) {
+			if (!parent) break;
+			if (!ts.isExpression(parent)) break;
+
+			if (
+				ts.isCallExpression(parent) &&
+				ts.isPropertyAccessExpression(parent.expression) &&
+				ts.isIdentifier(parent.expression.name)
+			) {
+				return;
+			}
+
+			parent = parent.parent;
+		}
+
 		DiagnosticService.addDiagnostic(errors.noIndexWithoutCall(node));
 	}
 

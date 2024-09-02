@@ -55,7 +55,7 @@ export class TransformState {
 		public readonly runtimeLibRbxPath: RbxPath | undefined,
 		public readonly typeChecker: ts.TypeChecker,
 		public readonly projectType: ProjectType,
-		sourceFile: ts.SourceFile,
+		public readonly sourceFile: ts.SourceFile,
 	) {
 		this.sourceFileText = sourceFile.getFullText();
 		this.resolver = typeChecker.getEmitResolver(sourceFile);
@@ -186,6 +186,7 @@ export class TransformState {
 	}
 
 	public usesRuntimeLib = false;
+	public customLibs = new Map<string, Set<string>>();
 	public TS(node: ts.Node, name: string) {
 		this.usesRuntimeLib = true;
 
@@ -194,6 +195,30 @@ export class TransformState {
 		}
 
 		return luau.property(luau.globals.TS, name);
+	}
+	public customLib(node: ts.Node, libPath: string, importedProperty: string): luau.Identifier {
+		const get = (name: string) => {
+			return luau.create(luau.SyntaxKind.Identifier, { name });
+		};
+
+		const spt = libPath.split("/");
+		if (node.getSourceFile().fileName.endsWith(spt[spt.length - 1] + ".ts")) {
+			return get(importedProperty);
+		}
+
+		if (!this.customLibs.has(libPath)) {
+			this.customLibs.set(libPath, new Set());
+		}
+
+		let size = 0;
+		for (const [, lib] of this.customLibs) {
+			size += lib.size;
+		}
+
+		const name = importedProperty;
+		this.customLibs.get(libPath)?.add(name);
+
+		return get(name);
 	}
 
 	/**

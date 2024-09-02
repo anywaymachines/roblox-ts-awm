@@ -1,4 +1,5 @@
 import luau from "@roblox-ts/luau-ast";
+import path from "path";
 import { errors } from "Shared/diagnostics";
 import { assert } from "Shared/util/assert";
 import { TransformState } from "TSTransformer";
@@ -83,6 +84,27 @@ function createBoilerplate(
 				value: createNameFunction(luau.isTemporaryIdentifier(className) ? "Anonymous" : className.name),
 			}),
 		);
+
+		const identifierByType = (type: ts.Type) => {
+			if (!type?.symbol?.valueDeclaration) return;
+
+			const pth = path
+				.relative("src", type.symbol.valueDeclaration.getSourceFile().fileName)
+				.replaceAll("\\", "/");
+			return pth + "$" + type.symbol.name;
+		};
+
+		const smb = node.symbol && state.typeChecker.getTypeOfSymbolAtLocation(node.symbol, node);
+		const idf = smb && identifierByType(smb);
+		if (idf) {
+			luau.list.push(
+				metatableFields,
+				luau.create(luau.SyntaxKind.MapField, {
+					index: luau.string("__csymbol"),
+					value: luau.string(idf),
+				}),
+			);
+		}
 
 		if (extendsNode) {
 			const [extendsExp, extendsExpPrereqs] = state.capture(() =>
