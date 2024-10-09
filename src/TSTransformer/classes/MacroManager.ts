@@ -243,7 +243,28 @@ export class MacroManager {
 			type: ts.Identifier,
 			file: ts.SourceFile,
 		) => {
+			if (!this.methodMap.get(type.text)) {
+				const className = type.text;
+				const symbol = getGlobalSymbolByNameOrThrow(this.typeChecker, className, ts.SymbolFlags.Interface);
+
+				const methodMap = new Map<string, ts.Symbol>();
+				for (const declaration of symbol.declarations ?? []) {
+					if (ts.isInterfaceDeclaration(declaration)) {
+						for (const member of declaration.members) {
+							if (ts.isMethodSignature(member) && ts.isIdentifier(member.name)) {
+								const symbol = getType(this.typeChecker, member).symbol;
+								assert(symbol);
+								methodMap.set(member.name.text, symbol);
+							}
+						}
+					}
+				}
+
+				this.methodMap.set(symbol.name, methodMap);
+			}
+
 			const smb = this.methodMap.get(type.text)?.get(propertyName.text);
+
 			assert(smb);
 
 			const pth = path.relative("src", file.path);

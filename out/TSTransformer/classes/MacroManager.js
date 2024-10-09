@@ -209,8 +209,25 @@ class MacroManager {
     }
     addPropertyMacrosFromFiles(files) {
         const addMacro = (declarationName, propertyName, type, file) => {
-            var _a;
-            const smb = (_a = this.methodMap.get(type.text)) === null || _a === void 0 ? void 0 : _a.get(propertyName.text);
+            var _a, _b;
+            if (!this.methodMap.get(type.text)) {
+                const className = type.text;
+                const symbol = getGlobalSymbolByNameOrThrow(this.typeChecker, className, typescript_1.default.SymbolFlags.Interface);
+                const methodMap = new Map();
+                for (const declaration of (_a = symbol.declarations) !== null && _a !== void 0 ? _a : []) {
+                    if (typescript_1.default.isInterfaceDeclaration(declaration)) {
+                        for (const member of declaration.members) {
+                            if (typescript_1.default.isMethodSignature(member) && typescript_1.default.isIdentifier(member.name)) {
+                                const symbol = getType(this.typeChecker, member).symbol;
+                                (0, assert_1.assert)(symbol);
+                                methodMap.set(member.name.text, symbol);
+                            }
+                        }
+                    }
+                }
+                this.methodMap.set(symbol.name, methodMap);
+            }
+            const smb = (_b = this.methodMap.get(type.text)) === null || _b === void 0 ? void 0 : _b.get(propertyName.text);
             (0, assert_1.assert)(smb);
             const pth = path_1.default.relative("src", file.path);
             const macro = (state, node, expression, args) => {
