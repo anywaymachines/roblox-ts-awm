@@ -27,15 +27,30 @@ function getAbsoluteImport(moduleRbxPath) {
     }
     return pathExpressions;
 }
-function getRelativeImport(sourceRbxPath, moduleRbxPath) {
-    const relativePath = rojo_resolver_1.RojoResolver.relative(sourceRbxPath, moduleRbxPath);
+function getRelativeImport(sourceRbxPath, moduleRbxPath, asClient = false) {
+    let base = luau_ast_1.default.globals.script;
+    let relativePath = rojo_resolver_1.RojoResolver.relative(sourceRbxPath, moduleRbxPath);
+    if (asClient) {
+        sourceRbxPath = [
+            'StarterPlayer',
+            'StarterPlayerScripts',
+            sourceRbxPath[sourceRbxPath.length - 1],
+        ];
+        base = luau_ast_1.default.property(luau_ast_1.default.property(luau_ast_1.default.create(luau_ast_1.default.SyntaxKind.MethodCallExpression, {
+            expression: luau_ast_1.default.create(luau_ast_1.default.SyntaxKind.Identifier, { name: 'game' }),
+            name: 'GetService',
+            args: luau_ast_1.default.list.make(luau_ast_1.default.string('Players')),
+        }), 'LocalPlayer'), 'PlayerScripts');
+        relativePath = rojo_resolver_1.RojoResolver.relative(sourceRbxPath, moduleRbxPath);
+        relativePath = relativePath.toSpliced(0, 1);
+    }
     const path = new Array();
     let i = 0;
     while (relativePath[i] === rojo_resolver_1.RbxPathParent) {
         path.push(constants_1.PARENT_FIELD);
         i++;
     }
-    const pathExpressions = [(0, expressionChain_1.propertyAccessExpressionChain)(luau_ast_1.default.globals.script, path)];
+    const pathExpressions = [(0, expressionChain_1.propertyAccessExpressionChain)(base, path)];
     for (; i < relativePath.length; i++) {
         const pathPart = relativePath[i];
         (0, assert_1.assert)(typeof pathPart === "string");
@@ -130,6 +145,14 @@ function getProjectImportParts(state, sourceFile, moduleSpecifier, moduleOutPath
             return getRelativeImport(sourceRbxPath, moduleRbxPath);
         }
         else {
+            if (fileRelation === rojo_resolver_1.FileRelation.OutToIn) {
+                if (state.rojoResolver.getNetworkType(moduleRbxPath) === rojo_resolver_1.NetworkType.Client) {
+                    return getRelativeImport(sourceRbxPath, moduleRbxPath, true);
+                }
+                if (state.rojoResolver.getNetworkType(moduleRbxPath) === rojo_resolver_1.NetworkType.Server) {
+                    return getAbsoluteImport(moduleRbxPath);
+                }
+            }
             DiagnosticService_1.DiagnosticService.addDiagnostic(diagnostics_1.errors.noIsolatedImport(moduleSpecifier));
             return [luau_ast_1.default.none()];
         }

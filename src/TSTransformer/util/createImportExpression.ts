@@ -23,8 +23,38 @@ function getAbsoluteImport(moduleRbxPath: RbxPath) {
 	return pathExpressions;
 }
 
-function getRelativeImport(sourceRbxPath: RbxPath, moduleRbxPath: RbxPath) {
-	const relativePath = RojoResolver.relative(sourceRbxPath, moduleRbxPath);
+function getRelativeImport(sourceRbxPath: RbxPath, moduleRbxPath: RbxPath, asClient = false) {
+	let base: luau.Expression = luau.globals.script;
+	let relativePath = RojoResolver.relative(sourceRbxPath, moduleRbxPath);
+
+	if (asClient) {
+		sourceRbxPath = [
+			'StarterPlayer',
+			'StarterPlayerScripts',
+			sourceRbxPath[sourceRbxPath.length - 1],
+		];
+
+		base = luau.property(
+			luau.property(
+				luau.create(
+					luau.SyntaxKind.MethodCallExpression,
+					{
+						expression: luau.create(luau.SyntaxKind.Identifier, { name: 'game' }),
+						name: 'GetService',
+						args: luau.list.make(
+							luau.string('Players'),
+						),
+					},
+				),
+				'LocalPlayer',
+			),
+			'PlayerScripts',
+		);
+
+		relativePath = RojoResolver.relative(sourceRbxPath, moduleRbxPath);
+		relativePath = relativePath.toSpliced(0, 1); // removing first .Parent
+	}
+
 
 	// create descending path pieces
 	const path = new Array<string>();
@@ -34,7 +64,7 @@ function getRelativeImport(sourceRbxPath: RbxPath, moduleRbxPath: RbxPath) {
 		i++;
 	}
 
-	const pathExpressions: Array<luau.Expression> = [propertyAccessExpressionChain(luau.globals.script, path)];
+	const pathExpressions: Array<luau.Expression> = [propertyAccessExpressionChain(base, path)];
 
 	// create descending path pieces
 	for (; i < relativePath.length; i++) {
@@ -173,6 +203,15 @@ function getProjectImportParts(
 		} else if (fileRelation === FileRelation.InToIn) {
 			return getRelativeImport(sourceRbxPath, moduleRbxPath);
 		} else {
+			if (fileRelation === FileRelation.OutToIn) {
+				if (state.rojoResolver.getNetworkType(moduleRbxPath) === NetworkType.Client) {
+					return getRelativeImport(sourceRbxPath, moduleRbxPath, true);
+				}
+				if (state.rojoResolver.getNetworkType(moduleRbxPath) === NetworkType.Server) {
+					return getAbsoluteImport(moduleRbxPath);
+				}
+			}
+
 			DiagnosticService.addDiagnostic(errors.noIsolatedImport(moduleSpecifier));
 			return [luau.none()];
 		}
