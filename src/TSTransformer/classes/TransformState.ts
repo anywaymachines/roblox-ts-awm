@@ -202,7 +202,7 @@ export class TransformState {
 		};
 
 		const spt = libPath.split("/");
-		if (node.getSourceFile().fileName.endsWith(spt[spt.length - 1] + ".ts")) {
+		if (node.getSourceFile()?.fileName.endsWith(spt[spt.length - 1] + ".ts")) {
 			return get(importedProperty);
 		}
 

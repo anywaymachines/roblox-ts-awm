@@ -25,6 +25,10 @@ function runCallMacro(
 	expression: luau.Expression,
 	nodeArguments: ReadonlyArray<ts.Expression>,
 ): luau.Expression {
+	if (ts.isSuperProperty(node.expression)) {
+		expression = luau.create(luau.SyntaxKind.Identifier, { name: 'self' });
+	}
+
 	let args!: Array<luau.Expression>;
 	const prereqs = state.capturePrereqs(() => {
 		args = ensureTransformOrder(state, nodeArguments);
@@ -167,13 +171,6 @@ export function transformPropertyCallExpressionInner(
 	// a.b in a.b()
 	validateNotAnyType(state, node.expression);
 
-	if (ts.isSuperProperty(expression)) {
-		return luau.call(luau.property(convertToIndexableExpression(baseExpression), expression.name.text), [
-			luau.globals.self,
-			...ensureTransformOrder(state, node.arguments),
-		]);
-	}
-
 	const expType = state.typeChecker.getNonOptionalType(state.getType(node.expression));
 	const symbol = getFirstDefinedSymbol(state, expType);
 	if (symbol) {
@@ -181,6 +178,13 @@ export function transformPropertyCallExpressionInner(
 		if (macro) {
 			return runCallMacro(macro, state, node, baseExpression, nodeArguments);
 		}
+	}
+
+	if (ts.isSuperProperty(expression)) {
+		return luau.call(luau.property(convertToIndexableExpression(baseExpression), expression.name.text), [
+			luau.globals.self,
+			...ensureTransformOrder(state, node.arguments),
+		]);
 	}
 
 	const [args, prereqs] = state.capture(() => ensureTransformOrder(state, nodeArguments));
@@ -229,6 +233,15 @@ export function transformElementCallExpressionInner(
 	// a[b] in a[b]()
 	validateNotAnyType(state, node.expression);
 
+	const expType = state.typeChecker.getNonOptionalType(state.getType(node.expression));
+	const symbol = getFirstDefinedSymbol(state, expType);
+	if (symbol) {
+		const macro = state.services.macroManager.getPropertyCallMacro(symbol);
+		if (macro) {
+			return runCallMacro(macro, state, node, baseExpression, nodeArguments);
+		}
+	}
+
 	if (ts.isSuperProperty(expression)) {
 		return luau.call(
 			luau.create(luau.SyntaxKind.ComputedIndexExpression, {
@@ -237,15 +250,6 @@ export function transformElementCallExpressionInner(
 			}),
 			[luau.globals.self, ...ensureTransformOrder(state, node.arguments)],
 		);
-	}
-
-	const expType = state.typeChecker.getNonOptionalType(state.getType(node.expression));
-	const symbol = getFirstDefinedSymbol(state, expType);
-	if (symbol) {
-		const macro = state.services.macroManager.getPropertyCallMacro(symbol);
-		if (macro) {
-			return runCallMacro(macro, state, node, baseExpression, nodeArguments);
-		}
 	}
 
 	const [[argumentExp, ...args], prereqs] = state.capture(() =>

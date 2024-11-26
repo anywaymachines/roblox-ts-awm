@@ -25,6 +25,9 @@ const valueToIdStr_1 = require("../../util/valueToIdStr");
 const wrapReturnIfLuaTuple_1 = require("../../util/wrapReturnIfLuaTuple");
 const typescript_1 = __importDefault(require("typescript"));
 function runCallMacro(macro, state, node, expression, nodeArguments) {
+    if (typescript_1.default.isSuperProperty(node.expression)) {
+        expression = luau_ast_1.default.create(luau_ast_1.default.SyntaxKind.Identifier, { name: 'self' });
+    }
     let args;
     const prereqs = state.capturePrereqs(() => {
         args = (0, ensureTransformOrder_1.ensureTransformOrder)(state, nodeArguments);
@@ -111,12 +114,6 @@ function transformCallExpressionInner(state, node, expression, nodeArguments) {
 function transformPropertyCallExpressionInner(state, node, expression, baseExpression, name, nodeArguments) {
     (0, validateNotAny_1.validateNotAnyType)(state, expression.expression);
     (0, validateNotAny_1.validateNotAnyType)(state, node.expression);
-    if (typescript_1.default.isSuperProperty(expression)) {
-        return luau_ast_1.default.call(luau_ast_1.default.property((0, convertToIndexableExpression_1.convertToIndexableExpression)(baseExpression), expression.name.text), [
-            luau_ast_1.default.globals.self,
-            ...(0, ensureTransformOrder_1.ensureTransformOrder)(state, node.arguments),
-        ]);
-    }
     const expType = state.typeChecker.getNonOptionalType(state.getType(node.expression));
     const symbol = (0, types_1.getFirstDefinedSymbol)(state, expType);
     if (symbol) {
@@ -124,6 +121,12 @@ function transformPropertyCallExpressionInner(state, node, expression, baseExpre
         if (macro) {
             return runCallMacro(macro, state, node, baseExpression, nodeArguments);
         }
+    }
+    if (typescript_1.default.isSuperProperty(expression)) {
+        return luau_ast_1.default.call(luau_ast_1.default.property((0, convertToIndexableExpression_1.convertToIndexableExpression)(baseExpression), expression.name.text), [
+            luau_ast_1.default.globals.self,
+            ...(0, ensureTransformOrder_1.ensureTransformOrder)(state, node.arguments),
+        ]);
     }
     const [args, prereqs] = state.capture(() => (0, ensureTransformOrder_1.ensureTransformOrder)(state, nodeArguments));
     fixVoidArgumentsForRobloxFunctions(state, expType, args, nodeArguments);
@@ -155,12 +158,6 @@ function transformElementCallExpressionInner(state, node, expression, baseExpres
     (0, validateNotAny_1.validateNotAnyType)(state, expression.expression);
     (0, validateNotAny_1.validateNotAnyType)(state, expression.argumentExpression);
     (0, validateNotAny_1.validateNotAnyType)(state, node.expression);
-    if (typescript_1.default.isSuperProperty(expression)) {
-        return luau_ast_1.default.call(luau_ast_1.default.create(luau_ast_1.default.SyntaxKind.ComputedIndexExpression, {
-            expression: (0, convertToIndexableExpression_1.convertToIndexableExpression)(baseExpression),
-            index: (0, transformExpression_1.transformExpression)(state, expression.argumentExpression),
-        }), [luau_ast_1.default.globals.self, ...(0, ensureTransformOrder_1.ensureTransformOrder)(state, node.arguments)]);
-    }
     const expType = state.typeChecker.getNonOptionalType(state.getType(node.expression));
     const symbol = (0, types_1.getFirstDefinedSymbol)(state, expType);
     if (symbol) {
@@ -168,6 +165,12 @@ function transformElementCallExpressionInner(state, node, expression, baseExpres
         if (macro) {
             return runCallMacro(macro, state, node, baseExpression, nodeArguments);
         }
+    }
+    if (typescript_1.default.isSuperProperty(expression)) {
+        return luau_ast_1.default.call(luau_ast_1.default.create(luau_ast_1.default.SyntaxKind.ComputedIndexExpression, {
+            expression: (0, convertToIndexableExpression_1.convertToIndexableExpression)(baseExpression),
+            index: (0, transformExpression_1.transformExpression)(state, expression.argumentExpression),
+        }), [luau_ast_1.default.globals.self, ...(0, ensureTransformOrder_1.ensureTransformOrder)(state, node.arguments)]);
     }
     const [[argumentExp, ...args], prereqs] = state.capture(() => (0, ensureTransformOrder_1.ensureTransformOrder)(state, [argumentExpression, ...nodeArguments]));
     fixVoidArgumentsForRobloxFunctions(state, expType, args, nodeArguments);
