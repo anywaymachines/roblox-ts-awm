@@ -275,7 +275,42 @@ export class MacroManager {
 						? luau.create(luau.SyntaxKind.Identifier, { name: declarationName.text })
 						: state.customLib(node, pth, declarationName.text);
 
-				return luau.call(luau.property(identifier, propertyName.text), [expression, ...args]);
+
+				/*
+				local result =
+					if type(t) == "table" and t.enable ~= nil then
+						t:enable()
+					else
+						Component2Macros.enable(t)
+				*/
+
+				const expr = state.pushToVar(expression);
+				return luau.create(luau.SyntaxKind.IfExpression, {
+					condition: luau.binary(
+						luau.binary(
+							luau.call(
+								luau.create(luau.SyntaxKind.Identifier, { name: "type" }),
+								[expr],
+							),
+							"==",
+							luau.string("table"),
+						),
+						"and",
+						luau.binary(
+							luau.property(expr, propertyName.text),
+							"~=",
+							luau.nil(),
+						),
+					),
+					expression: luau.call(
+						luau.property(expr, propertyName.text),
+						[expr, ...args],
+					),
+					alternative:  luau.call(
+						luau.property(identifier, propertyName.text),
+						[expression, ...args],
+					),
+				});
 			};
 
 			this.customPropertyCallMacros.set(smb, macro);

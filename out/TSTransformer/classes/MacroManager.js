@@ -234,7 +234,12 @@ class MacroManager {
                 const identifier = state.sourceFile.fileName === file.fileName
                     ? luau_ast_1.default.create(luau_ast_1.default.SyntaxKind.Identifier, { name: declarationName.text })
                     : state.customLib(node, pth, declarationName.text);
-                return luau_ast_1.default.call(luau_ast_1.default.property(identifier, propertyName.text), [expression, ...args]);
+                const expr = state.pushToVar(expression);
+                return luau_ast_1.default.create(luau_ast_1.default.SyntaxKind.IfExpression, {
+                    condition: luau_ast_1.default.binary(luau_ast_1.default.binary(luau_ast_1.default.call(luau_ast_1.default.create(luau_ast_1.default.SyntaxKind.Identifier, { name: "type" }), [expr]), "==", luau_ast_1.default.string("table")), "and", luau_ast_1.default.binary(luau_ast_1.default.property(expr, propertyName.text), "~=", luau_ast_1.default.nil())),
+                    expression: luau_ast_1.default.call(luau_ast_1.default.property(expr, propertyName.text), [expr, ...args]),
+                    alternative: luau_ast_1.default.call(luau_ast_1.default.property(identifier, propertyName.text), [expression, ...args]),
+                });
             };
             this.customPropertyCallMacros.set(smb, macro);
         };
