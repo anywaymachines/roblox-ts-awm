@@ -235,6 +235,7 @@ class MacroManager {
                     ? luau_ast_1.default.create(luau_ast_1.default.SyntaxKind.Identifier, { name: declarationName.text })
                     : state.customLib(node, pth, declarationName.text);
                 const expr = state.pushToVar(expression);
+                args = args.map(arg => state.pushToVarIfComplex(arg));
                 return luau_ast_1.default.create(luau_ast_1.default.SyntaxKind.IfExpression, {
                     condition: luau_ast_1.default.binary(luau_ast_1.default.binary(luau_ast_1.default.call(luau_ast_1.default.create(luau_ast_1.default.SyntaxKind.Identifier, { name: "type" }), [expr]), "==", luau_ast_1.default.string("table")), "and", luau_ast_1.default.binary(luau_ast_1.default.property(expr, propertyName.text), "~=", luau_ast_1.default.nil())),
                     expression: luau_ast_1.default.call(luau_ast_1.default.property(expr, propertyName.text), [expr, ...args]),

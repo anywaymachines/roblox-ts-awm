@@ -285,6 +285,8 @@ export class MacroManager {
 				*/
 
 				const expr = state.pushToVar(expression);
+				args = args.map(arg => state.pushToVarIfComplex(arg));
+
 				return luau.create(luau.SyntaxKind.IfExpression, {
 					condition: luau.binary(
 						luau.binary(
