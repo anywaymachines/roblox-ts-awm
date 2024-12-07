@@ -308,9 +308,9 @@ export class MacroManager {
 						luau.property(expr, propertyName.text),
 						[expr, ...args],
 					),
-					alternative:  luau.call(
+					alternative: luau.call(
 						luau.property(identifier, propertyName.text),
-						[expression, ...args],
+						[expr, ...args],
 					),
 				});
 			};
