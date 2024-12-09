@@ -229,7 +229,7 @@ export function transformSourceFile(state: TransformState, node: ts.SourceFile) 
 	if (state.usesRuntimeLib || state.customLibs.size > 0) {
 		luau.list.push(headerStatements, state.createRuntimeLibImport(node));
 	}
-	for (const [path, names] of state.customLibs) {
+	for (const [path, { set: names, file }] of state.customLibs) {
 		const specifier = ts.factory.createStringLiteral(path);
 		(specifier as { parent: ts.Node }).parent = node.getSourceFile();
 
@@ -239,7 +239,7 @@ export function transformSourceFile(state: TransformState, node: ts.SourceFile) 
 				right: luau.property(
 					luau.call(state.TS(state.sourceFile, "import"), [
 						luau.globals.script,
-						...getImportParts(state, node.getSourceFile(), specifier),
+						...getImportParts(state, node.getSourceFile(), specifier, file),
 					]),
 					name,
 				),

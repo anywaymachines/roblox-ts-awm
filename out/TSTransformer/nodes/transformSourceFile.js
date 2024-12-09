@@ -161,7 +161,7 @@ function transformSourceFile(state, node) {
     if (state.usesRuntimeLib || state.customLibs.size > 0) {
         luau_ast_1.default.list.push(headerStatements, state.createRuntimeLibImport(node));
     }
-    for (const [path, names] of state.customLibs) {
+    for (const [path, { set: names, file }] of state.customLibs) {
         const specifier = typescript_1.default.factory.createStringLiteral(path);
         specifier.parent = node.getSourceFile();
         for (const name of names) {
@@ -169,7 +169,7 @@ function transformSourceFile(state, node) {
                 left: luau_ast_1.default.list.make(luau_ast_1.default.create(luau_ast_1.default.SyntaxKind.Identifier, { name })),
                 right: luau_ast_1.default.property(luau_ast_1.default.call(state.TS(state.sourceFile, "import"), [
                     luau_ast_1.default.globals.script,
-                    ...(0, createImportExpression_1.getImportParts)(state, node.getSourceFile(), specifier),
+                    ...(0, createImportExpression_1.getImportParts)(state, node.getSourceFile(), specifier, file),
                 ]), name),
             });
             luau_ast_1.default.list.push(headerStatements, ex);

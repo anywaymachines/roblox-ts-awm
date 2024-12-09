@@ -186,7 +186,7 @@ export class TransformState {
 	}
 
 	public usesRuntimeLib = false;
-	public customLibs = new Map<string, Set<string>>();
+	public customLibs = new Map<string, { set: Set<string>, file: ts.SourceFile }>();
 	public TS(node: ts.Node, name: string) {
 		this.usesRuntimeLib = true;
 
@@ -196,7 +196,7 @@ export class TransformState {
 
 		return luau.property(luau.globals.TS, name);
 	}
-	public customLib(node: ts.Node, libPath: string, importedProperty: string): luau.Identifier {
+	public customLib(node: ts.Node, libPath: string, importedProperty: string, file:ts.SourceFile): luau.Identifier {
 		const get = (name: string) => {
 			return luau.create(luau.SyntaxKind.Identifier, { name });
 		};
@@ -207,16 +207,16 @@ export class TransformState {
 		}
 
 		if (!this.customLibs.has(libPath)) {
-			this.customLibs.set(libPath, new Set());
+			this.customLibs.set(libPath, { set: new Set(), file });
 		}
 
 		let size = 0;
 		for (const [, lib] of this.customLibs) {
-			size += lib.size;
+			size += lib.set.size;
 		}
 
 		const name = importedProperty;
-		this.customLibs.get(libPath)?.add(name);
+		this.customLibs.get(libPath)?.set.add(name);
 
 		return get(name);
 	}

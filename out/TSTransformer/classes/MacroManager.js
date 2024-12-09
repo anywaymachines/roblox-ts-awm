@@ -67,8 +67,8 @@ function getFirstDeclarationOrThrow(symbol, check) {
     }
     throw new ProjectError_1.ProjectError("");
 }
-function getGlobalSymbolByNameOrThrow(typeChecker, name, meaning) {
-    const symbol = typeChecker.resolveName(name, undefined, meaning, false);
+function getGlobalSymbolByNameOrThrow(typeChecker, name, meaning, location) {
+    const symbol = typeChecker.resolveName(name, location, meaning, false);
     if (symbol) {
         return symbol;
     }
@@ -186,7 +186,7 @@ class MacroManager {
             const smb = getGlobalSymbolByNameOrThrow(this.typeChecker, name.text, typescript_1.default.SymbolFlags.Function);
             const pth = path_1.default.relative("src", file.path);
             const macro = (state, node, expression, args) => {
-                const identifier = state.customLib(node, pth, name.text);
+                const identifier = state.customLib(node, pth, name.text, file);
                 return luau_ast_1.default.call(identifier, args);
             };
             this.customCallMacros.set(smb, macro);
@@ -208,32 +208,27 @@ class MacroManager {
         }
     }
     addPropertyMacrosFromFiles(files) {
-        const addMacro = (declarationName, propertyName, type, file) => {
-            var _a, _b;
-            if (!this.methodMap.get(type.text)) {
-                const className = type.text;
-                const symbol = getGlobalSymbolByNameOrThrow(this.typeChecker, className, typescript_1.default.SymbolFlags.Interface);
-                const methodMap = new Map();
-                for (const declaration of (_a = symbol.declarations) !== null && _a !== void 0 ? _a : []) {
-                    if (typescript_1.default.isInterfaceDeclaration(declaration)) {
-                        for (const member of declaration.members) {
-                            if (typescript_1.default.isMethodSignature(member) && typescript_1.default.isIdentifier(member.name)) {
-                                const symbol = getType(this.typeChecker, member).symbol;
-                                (0, assert_1.assert)(symbol);
-                                methodMap.set(member.name.text, symbol);
-                            }
-                        }
-                    }
+        var _a, _b;
+        const addInterfaceMethods = (declaration, methodMap) => {
+            for (const member of declaration.members) {
+                if (typescript_1.default.isMethodSignature(member) && typescript_1.default.isIdentifier(member.name)) {
+                    const symbol = getType(this.typeChecker, member).symbol;
+                    (0, assert_1.assert)(symbol);
+                    methodMap.set(member.name.text, symbol);
                 }
-                this.methodMap.set(symbol.name, methodMap);
             }
-            const smb = (_b = this.methodMap.get(type.text)) === null || _b === void 0 ? void 0 : _b.get(propertyName.text);
-            (0, assert_1.assert)(smb);
+        };
+        const addMacro = (declarationName, propertyName, type, file) => {
+            var _a;
+            const smb = (_a = this.methodMap.get(type.text)) === null || _a === void 0 ? void 0 : _a.get(propertyName.text);
+            if (!smb) {
+                throw new ProjectError_1.ProjectError(`MacroManager could not find symbol for ${type}.${propertyName.text}` + TYPES_NOTICE);
+            }
             const pth = path_1.default.relative("src", file.path);
             const macro = (state, node, expression, args) => {
                 const identifier = state.sourceFile.fileName === file.fileName
                     ? luau_ast_1.default.create(luau_ast_1.default.SyntaxKind.Identifier, { name: declarationName.text })
-                    : state.customLib(node, pth, declarationName.text);
+                    : state.customLib(node, pth, declarationName.text, file);
                 const expr = state.pushToVar(expression);
                 args = args.map(arg => state.pushToVarIfComplex(arg));
                 return luau_ast_1.default.create(luau_ast_1.default.SyntaxKind.IfExpression, {
@@ -249,7 +244,20 @@ class MacroManager {
             if (!file.path.includes(".propmacro."))
                 continue;
             for (const statement of file.statements) {
-                if (typescript_1.default.isVariableStatement(statement)) {
+                if (typescript_1.default.isModuleDeclaration(statement)) {
+                    if (((_a = statement.modifiers) === null || _a === void 0 ? void 0 : _a[0].kind) !== typescript_1.default.SyntaxKind.DeclareKeyword)
+                        continue;
+                    if (!statement.body || !typescript_1.default.isModuleBlock(statement.body))
+                        continue;
+                    for (const declaration of statement.body.statements) {
+                        if (!typescript_1.default.isInterfaceDeclaration(declaration))
+                            continue;
+                        const methodMap = (_b = this.methodMap.get(declaration.name.text)) !== null && _b !== void 0 ? _b : new Map();
+                        addInterfaceMethods(declaration, methodMap);
+                        this.methodMap.set(declaration.name.text, methodMap);
+                    }
+                }
+                else if (typescript_1.default.isVariableStatement(statement)) {
                     if (!isExported(statement))
                         continue;
                     for (const declaration of statement.declarationList.declarations) {

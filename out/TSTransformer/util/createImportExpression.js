@@ -161,9 +161,9 @@ function getProjectImportParts(state, sourceFile, moduleSpecifier, moduleOutPath
         return getRelativeImport(sourceRbxPath, moduleRbxPath);
     }
 }
-function getImportParts(state, sourceFile, moduleSpecifier) {
+function getImportParts(state, sourceFile, moduleSpecifier, moduleFile) {
     var _a;
-    const moduleFile = (0, getSourceFileFromModuleSpecifier_1.getSourceFileFromModuleSpecifier)(state, moduleSpecifier);
+    moduleFile !== null && moduleFile !== void 0 ? moduleFile : (moduleFile = (0, getSourceFileFromModuleSpecifier_1.getSourceFileFromModuleSpecifier)(state, moduleSpecifier));
     if (!moduleFile) {
         DiagnosticService_1.DiagnosticService.addDiagnostic(diagnostics_1.errors.noModuleSpecifierFile(moduleSpecifier));
         return [luau_ast_1.default.none()];

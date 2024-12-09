@@ -72,8 +72,8 @@ function getFirstDeclarationOrThrow<T extends ts.Node>(symbol: ts.Symbol, check:
 	throw new ProjectError("");
 }
 
-function getGlobalSymbolByNameOrThrow(typeChecker: ts.TypeChecker, name: string, meaning: ts.SymbolFlags) {
-	const symbol = typeChecker.resolveName(name, undefined, meaning, false);
+function getGlobalSymbolByNameOrThrow(typeChecker: ts.TypeChecker, name: string, meaning: ts.SymbolFlags, location?: ts.Node) {
+	const symbol = typeChecker.resolveName(name, location, meaning, false);
 	if (symbol) {
 		return symbol;
 	}
@@ -101,7 +101,7 @@ export class MacroManager {
 	private constructorMacros = new Map<ts.Symbol, ConstructorMacro>();
 	private propertyCallMacros = new Map<ts.Symbol, PropertyCallMacro>();
 	private customPropertyCallMacros = new Map<ts.Symbol, PropertyCallMacro>();
-	private readonly methodMap = new Map<string, ReadonlyMap<string, ts.Symbol>>();
+	private readonly methodMap = new Map<string, Map<string, ts.Symbol>>();
 
 	constructor(private readonly typeChecker: ts.TypeChecker) {
 		for (const [name, macro] of Object.entries(IDENTIFIER_MACROS)) {
@@ -213,7 +213,7 @@ export class MacroManager {
 			const pth = path.relative("src", file.path);
 
 			const macro: CallMacro = (state, node, expression, args) => {
-				const identifier = state.customLib(node, pth, name.text);
+				const identifier = state.customLib(node, pth, name.text, file);
 				return luau.call(identifier, args);
 			};
 
@@ -237,35 +237,25 @@ export class MacroManager {
 		}
 	}
 	public addPropertyMacrosFromFiles(files: ReadonlyArray<ts.SourceFile>) {
+		const addInterfaceMethods = (declaration: ts.InterfaceDeclaration, methodMap: Map<string, ts.Symbol>) => {
+			for (const member of declaration.members) {
+				if (ts.isMethodSignature(member) && ts.isIdentifier(member.name)) {
+					const symbol = getType(this.typeChecker, member).symbol;
+					assert(symbol);
+					methodMap.set(member.name.text, symbol);
+				}
+			}
+		}
 		const addMacro = (
 			declarationName: ts.Identifier,
 			propertyName: ts.Identifier,
 			type: ts.Identifier,
 			file: ts.SourceFile,
 		) => {
-			if (!this.methodMap.get(type.text)) {
-				const className = type.text;
-				const symbol = getGlobalSymbolByNameOrThrow(this.typeChecker, className, ts.SymbolFlags.Interface);
-
-				const methodMap = new Map<string, ts.Symbol>();
-				for (const declaration of symbol.declarations ?? []) {
-					if (ts.isInterfaceDeclaration(declaration)) {
-						for (const member of declaration.members) {
-							if (ts.isMethodSignature(member) && ts.isIdentifier(member.name)) {
-								const symbol = getType(this.typeChecker, member).symbol;
-								assert(symbol);
-								methodMap.set(member.name.text, symbol);
-							}
-						}
-					}
-				}
-
-				this.methodMap.set(symbol.name, methodMap);
-			}
-
 			const smb = this.methodMap.get(type.text)?.get(propertyName.text);
-
-			assert(smb);
+			if (!smb) {
+				throw new ProjectError(`MacroManager could not find symbol for ${type}.${propertyName.text}` + TYPES_NOTICE);
+			}
 
 			const pth = path.relative("src", file.path);
 
@@ -273,7 +263,7 @@ export class MacroManager {
 				const identifier =
 					state.sourceFile.fileName === file.fileName
 						? luau.create(luau.SyntaxKind.Identifier, { name: declarationName.text })
-						: state.customLib(node, pth, declarationName.text);
+						: state.customLib(node, pth, declarationName.text, file);
 
 
 				/*
@@ -324,7 +314,20 @@ export class MacroManager {
 			if (!file.path.includes(".propmacro.")) continue;
 
 			for (const statement of file.statements) {
-				if (ts.isVariableStatement(statement)) {
+				if (ts.isModuleDeclaration(statement)) {
+					if (statement.modifiers?.[0].kind !== ts.SyntaxKind.DeclareKeyword) continue;
+					if (!statement.body || !ts.isModuleBlock(statement.body)) continue;
+
+					for (const declaration of statement.body.statements) {
+						if (!ts.isInterfaceDeclaration(declaration)) continue;
+
+						const methodMap = this.methodMap.get(declaration.name.text) ?? new Map<string, ts.Symbol>();
+						
+						addInterfaceMethods(declaration, methodMap)
+						this.methodMap.set(declaration.name.text, methodMap);
+					}
+				}
+				else if (ts.isVariableStatement(statement)) {
 					if (!isExported(statement)) continue;
 
 					for (const declaration of statement.declarationList.declarations) {

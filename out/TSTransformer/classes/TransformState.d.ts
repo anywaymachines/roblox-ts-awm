@@ -51,9 +51,12 @@ export declare class TransformState {
     private getTypeCache;
     getType(node: ts.Node): ts.Type;
     usesRuntimeLib: boolean;
-    customLibs: Map<string, Set<string>>;
+    customLibs: Map<string, {
+        set: Set<string>;
+        file: ts.SourceFile;
+    }>;
     TS(node: ts.Node, name: string): luau.PropertyAccessExpression;
-    customLib(node: ts.Node, libPath: string, importedProperty: string): luau.Identifier;
+    customLib(node: ts.Node, libPath: string, importedProperty: string, file: ts.SourceFile): luau.Identifier;
     createRuntimeLibImport(sourceFile: ts.SourceFile): luau.VariableDeclaration;
     pushToVar(expression: luau.Expression | undefined, name?: string): luau.TemporaryIdentifier;
     pushToVarIfComplex<T extends luau.Expression>(expression: T, name?: string): Extract<T, luau.SimpleTypes> | luau.TemporaryIdentifier;

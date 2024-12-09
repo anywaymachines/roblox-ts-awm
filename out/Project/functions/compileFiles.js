@@ -115,8 +115,8 @@ function compileFiles(program, data, pathTranslator, sourceFiles) {
         return { emitSkipped: true, diagnostics: DiagnosticService_1.DiagnosticService.flush() };
     const typeChecker = proxyProgram.getTypeChecker();
     const services = (0, createTransformServices_1.createTransformServices)(typeChecker);
-    services.macroManager.addCallMacrosFromFiles(program.getSourceFiles());
-    services.macroManager.addPropertyMacrosFromFiles(program.getSourceFiles());
+    services.macroManager.addCallMacrosFromFiles(sourceFiles.map(f => proxyProgram.getSourceFile(f.fileName)).filter(f => !!f));
+    services.macroManager.addPropertyMacrosFromFiles(sourceFiles.map(f => proxyProgram.getSourceFile(f.fileName)).filter(f => !!f));
     for (let i = 0; i < sourceFiles.length; i++) {
         const sourceFile = proxyProgram.getSourceFile(sourceFiles[i].fileName);
         (0, assert_1.assert)(sourceFile);

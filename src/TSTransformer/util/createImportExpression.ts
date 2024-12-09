@@ -220,8 +220,8 @@ function getProjectImportParts(
 	}
 }
 
-export function getImportParts(state: TransformState, sourceFile: ts.SourceFile, moduleSpecifier: ts.Expression) {
-	const moduleFile = getSourceFileFromModuleSpecifier(state, moduleSpecifier);
+export function getImportParts(state: TransformState, sourceFile: ts.SourceFile, moduleSpecifier: ts.Expression, moduleFile?: ts.SourceFile) {
+	moduleFile ??= getSourceFileFromModuleSpecifier(state, moduleSpecifier);
 	if (!moduleFile) {
 		DiagnosticService.addDiagnostic(errors.noModuleSpecifierFile(moduleSpecifier));
 		return [luau.none()];

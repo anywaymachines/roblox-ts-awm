@@ -151,7 +151,7 @@ class TransformState {
         }
         return luau_ast_1.default.property(luau_ast_1.default.globals.TS, name);
     }
-    customLib(node, libPath, importedProperty) {
+    customLib(node, libPath, importedProperty, file) {
         var _a, _b;
         const get = (name) => {
             return luau_ast_1.default.create(luau_ast_1.default.SyntaxKind.Identifier, { name });
@@ -161,14 +161,14 @@ class TransformState {
             return get(importedProperty);
         }
         if (!this.customLibs.has(libPath)) {
-            this.customLibs.set(libPath, new Set());
+            this.customLibs.set(libPath, { set: new Set(), file });
         }
         let size = 0;
         for (const [, lib] of this.customLibs) {
-            size += lib.size;
+            size += lib.set.size;
         }
         const name = importedProperty;
-        (_b = this.customLibs.get(libPath)) === null || _b === void 0 ? void 0 : _b.add(name);
+        (_b = this.customLibs.get(libPath)) === null || _b === void 0 ? void 0 : _b.set.add(name);
         return get(name);
     }
     createRuntimeLibImport(sourceFile) {
