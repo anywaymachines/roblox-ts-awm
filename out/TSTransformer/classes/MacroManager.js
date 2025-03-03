@@ -271,8 +271,6 @@ class MacroManager {
                             continue;
                         if (!declaration.type.typeArguments)
                             continue;
-                        if (declaration.type.typeArguments.length !== 1)
-                            continue;
                         if (!declaration.initializer || !typescript_1.default.isObjectLiteralExpression(declaration.initializer)) {
                             continue;
                         }

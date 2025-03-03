@@ -337,7 +337,6 @@ export class MacroManager {
 						if (!ts.isIdentifier(declaration.type.typeName)) continue;
 						if (declaration.type.typeName.text !== "PropertyMacros") continue;
 						if (!declaration.type.typeArguments) continue;
-						if (declaration.type.typeArguments.length !== 1) continue;
 
 						if (!declaration.initializer || !ts.isObjectLiteralExpression(declaration.initializer)) {
 							continue;
