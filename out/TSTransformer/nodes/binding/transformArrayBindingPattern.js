@@ -4,12 +4,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.transformArrayBindingPattern = transformArrayBindingPattern;
-const diagnostics_1 = require("../../../Shared/diagnostics");
-const DiagnosticService_1 = require("../../classes/DiagnosticService");
 const transformObjectBindingPattern_1 = require("./transformObjectBindingPattern");
 const transformVariableStatement_1 = require("../statements/transformVariableStatement");
 const transformInitializer_1 = require("../transformInitializer");
 const getAccessorForBindingType_1 = require("../../util/binding/getAccessorForBindingType");
+const spreadDestructuring_1 = require("../../util/spreadDestructuring");
 const validateNotAny_1 = require("../../util/validateNotAny");
 const typescript_1 = __importDefault(require("typescript"));
 function transformArrayBindingPattern(state, bindingPattern, parentId) {
@@ -17,17 +16,17 @@ function transformArrayBindingPattern(state, bindingPattern, parentId) {
     let index = 0;
     const idStack = new Array();
     const accessor = (0, getAccessorForBindingType_1.getAccessorForBindingType)(state, bindingPattern, state.getType(bindingPattern));
+    const destructor = (0, spreadDestructuring_1.getSpreadDestructorForType)(state, bindingPattern, state.getType(bindingPattern));
     for (const element of bindingPattern.elements) {
         if (typescript_1.default.isOmittedExpression(element)) {
             accessor(state, parentId, index, idStack, true);
         }
         else {
-            if (element.dotDotDotToken) {
-                DiagnosticService_1.DiagnosticService.addDiagnostic(diagnostics_1.errors.noSpreadDestructuring(element));
-                return;
-            }
             const name = element.name;
-            const value = accessor(state, parentId, index, idStack, false);
+            const isSpreadElement = element.dotDotDotToken !== undefined;
+            const value = isSpreadElement
+                ? destructor(state, parentId, index, idStack)
+                : accessor(state, parentId, index, idStack, false);
             if (typescript_1.default.isIdentifier(name)) {
                 const id = (0, transformVariableStatement_1.transformVariable)(state, name, value);
                 if (element.initializer) {

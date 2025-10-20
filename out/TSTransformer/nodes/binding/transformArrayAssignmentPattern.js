@@ -13,18 +13,18 @@ const transformInitializer_1 = require("../transformInitializer");
 const transformWritable_1 = require("../transformWritable");
 const getAccessorForBindingType_1 = require("../../util/binding/getAccessorForBindingType");
 const getKindName_1 = require("../../util/getKindName");
+const spreadDestructuring_1 = require("../../util/spreadDestructuring");
 const traversal_1 = require("../../util/traversal");
 const typescript_1 = __importDefault(require("typescript"));
 function transformArrayAssignmentPattern(state, assignmentPattern, parentId) {
     let index = 0;
     const idStack = new Array();
-    const accessor = (0, getAccessorForBindingType_1.getAccessorForBindingType)(state, assignmentPattern, state.typeChecker.getTypeOfAssignmentPattern(assignmentPattern));
+    const patternType = state.typeChecker.getTypeOfAssignmentPattern(assignmentPattern);
+    const accessor = (0, getAccessorForBindingType_1.getAccessorForBindingType)(state, assignmentPattern, patternType);
+    const destructor = (0, spreadDestructuring_1.getSpreadDestructorForType)(state, assignmentPattern, patternType);
     for (let element of assignmentPattern.elements) {
         if (typescript_1.default.isOmittedExpression(element)) {
             accessor(state, parentId, index, idStack, true);
-        }
-        else if (typescript_1.default.isSpreadElement(element)) {
-            DiagnosticService_1.DiagnosticService.addDiagnostic(diagnostics_1.errors.noSpreadDestructuring(element));
         }
         else {
             let initializer;
@@ -32,11 +32,19 @@ function transformArrayAssignmentPattern(state, assignmentPattern, parentId) {
                 initializer = (0, traversal_1.skipDownwards)(element.right);
                 element = (0, traversal_1.skipDownwards)(element.left);
             }
-            const value = accessor(state, parentId, index, idStack, false);
+            const value = typescript_1.default.isSpreadElement(element)
+                ? destructor(state, parentId, index, idStack)
+                : accessor(state, parentId, index, idStack, false);
+            if (typescript_1.default.isSpreadElement(element) &&
+                (typescript_1.default.isObjectLiteralExpression(element.expression) || typescript_1.default.isArrayLiteralExpression(element.expression))) {
+                DiagnosticService_1.DiagnosticService.addDiagnostic(diagnostics_1.errors.noNestedSpreadsInAssignmentPatterns(element.parent));
+                continue;
+            }
             if (typescript_1.default.isIdentifier(element) ||
                 typescript_1.default.isElementAccessExpression(element) ||
-                typescript_1.default.isPropertyAccessExpression(element)) {
-                const id = (0, transformWritable_1.transformWritableExpression)(state, element, initializer !== undefined);
+                typescript_1.default.isPropertyAccessExpression(element) ||
+                typescript_1.default.isSpreadElement(element)) {
+                const id = (0, transformWritable_1.transformWritableExpression)(state, typescript_1.default.isSpreadElement(element) ? element.expression : element, initializer !== undefined);
                 state.prereq(luau_ast_1.default.create(luau_ast_1.default.SyntaxKind.Assignment, {
                     left: id,
                     operator: "=",

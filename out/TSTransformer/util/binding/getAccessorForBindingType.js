@@ -118,7 +118,7 @@ function getAccessorForBindingType(state, node, type) {
     else if ((0, types_1.isDefinitelyType)(type, (0, types_1.isSetType)(state))) {
         return setAccessor;
     }
-    else if ((0, types_1.isDefinitelyType)(type, (0, types_1.isMapType)(state))) {
+    else if ((0, types_1.isDefinitelyType)(type, (0, types_1.isMapType)(state)) || (0, types_1.isDefinitelyType)(type, (0, types_1.isSharedTableType)(state))) {
         return mapAccessor;
     }
     else if ((0, types_1.isDefinitelyType)(type, (0, types_1.isIterableFunctionLuaTupleType)(state))) {

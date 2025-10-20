@@ -1,5 +1,5 @@
 import { ProjectOptions } from "../../Shared/types";
-import yargs from "yargs";
+import type yargs from "yargs";
 interface BuildFlags {
     project: string;
 }

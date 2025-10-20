@@ -7,8 +7,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const CLIError_1 = require("./errors/CLIError");
 const LogService_1 = require("../Shared/classes/LogService");
 const constants_1 = require("../Shared/constants");
-const yargs_1 = __importDefault(require("yargs"));
-yargs_1.default
+const helpers_1 = require("yargs/helpers");
+const yargs_1 = __importDefault(require("yargs/yargs"));
+const cli = (0, yargs_1.default)((0, helpers_1.hideBin)(process.argv));
+cli
     .usage("roblox-ts - A TypeScript-to-Luau Compiler for Roblox")
     .help("help")
     .alias("h", "help")
@@ -19,7 +21,7 @@ yargs_1.default
     .commandDir(`${constants_1.PACKAGE_ROOT}/out/CLI/commands`)
     .recommendCommands()
     .strict()
-    .wrap(yargs_1.default.terminalWidth())
+    .wrap(cli.terminalWidth())
     .fail(str => {
     process.exitCode = 1;
     if (str) {

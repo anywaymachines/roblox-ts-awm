@@ -18,6 +18,8 @@ const transformExpression_1 = require("../expressions/transformExpression");
 const transformIdentifier_1 = require("../expressions/transformIdentifier");
 const transformInitializer_1 = require("../transformInitializer");
 const arrayBindingPatternContainsHoists_1 = require("../../util/arrayBindingPatternContainsHoists");
+const arrayLikeExpressionContainsSpread_1 = require("../../util/arrayLikeExpressionContainsSpread");
+const getTargetIdForBindingPattern_1 = require("../../util/binding/getTargetIdForBindingPattern");
 const checkVariableHoist_1 = require("../../util/checkVariableHoist");
 const isSymbolMutable_1 = require("../../util/isSymbolMutable");
 const types_1 = require("../../util/types");
@@ -62,10 +64,6 @@ function transformOptimizedArrayBindingPattern(state, bindingPattern, rhs) {
                     luau_ast_1.default.list.push(ids, luau_ast_1.default.tempId());
                 }
                 else {
-                    if (element.dotDotDotToken) {
-                        DiagnosticService_1.DiagnosticService.addDiagnostic(diagnostics_1.errors.noSpreadDestructuring(element));
-                        return;
-                    }
                     if (typescript_1.default.isIdentifier(element.name)) {
                         (0, validateIdentifier_1.validateIdentifier)(state, element.name);
                         const id = (0, transformIdentifier_1.transformIdentifierDefined)(state, element.name);
@@ -116,20 +114,22 @@ function transformVariableDeclaration(state, node) {
         if (typescript_1.default.isArrayBindingPattern(name)) {
             if (luau_ast_1.default.isCall(value) &&
                 (0, types_1.isLuaTupleType)(state)(state.getType(node.initializer)) &&
-                !(0, arrayBindingPatternContainsHoists_1.arrayBindingPatternContainsHoists)(state, name)) {
+                !(0, arrayBindingPatternContainsHoists_1.arrayBindingPatternContainsHoists)(state, name) &&
+                !(0, arrayLikeExpressionContainsSpread_1.arrayLikeExpressionContainsSpread)(name)) {
                 luau_ast_1.default.list.pushList(statements, transformOptimizedArrayBindingPattern(state, name, value));
             }
             else if (luau_ast_1.default.isArray(value) &&
                 !luau_ast_1.default.list.isEmpty(value.members) &&
-                !(0, arrayBindingPatternContainsHoists_1.arrayBindingPatternContainsHoists)(state, name)) {
+                !(0, arrayBindingPatternContainsHoists_1.arrayBindingPatternContainsHoists)(state, name) &&
+                !(0, arrayLikeExpressionContainsSpread_1.arrayLikeExpressionContainsSpread)(name)) {
                 luau_ast_1.default.list.pushList(statements, transformOptimizedArrayBindingPattern(state, name, value.members));
             }
             else {
-                luau_ast_1.default.list.pushList(statements, state.capturePrereqs(() => (0, transformArrayBindingPattern_1.transformArrayBindingPattern)(state, name, state.pushToVar(value, "binding"))));
+                luau_ast_1.default.list.pushList(statements, state.capturePrereqs(() => (0, transformArrayBindingPattern_1.transformArrayBindingPattern)(state, name, (0, getTargetIdForBindingPattern_1.getTargetIdForBindingPattern)(state, name, value))));
             }
         }
         else {
-            luau_ast_1.default.list.pushList(statements, state.capturePrereqs(() => (0, transformObjectBindingPattern_1.transformObjectBindingPattern)(state, name, state.pushToVar(value, "binding"))));
+            luau_ast_1.default.list.pushList(statements, state.capturePrereqs(() => (0, transformObjectBindingPattern_1.transformObjectBindingPattern)(state, name, (0, getTargetIdForBindingPattern_1.getTargetIdForBindingPattern)(state, name, value))));
         }
     }
     return statements;

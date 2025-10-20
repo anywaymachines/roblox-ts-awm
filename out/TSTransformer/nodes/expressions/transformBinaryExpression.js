@@ -15,7 +15,9 @@ const transformInitializer_1 = require("../transformInitializer");
 const transformLogical_1 = require("../transformLogical");
 const transformLogicalOrCoalescingAssignmentExpression_1 = require("../transformLogicalOrCoalescingAssignmentExpression");
 const transformWritable_1 = require("../transformWritable");
+const arrayLikeExpressionContainsSpread_1 = require("../../util/arrayLikeExpressionContainsSpread");
 const assignment_1 = require("../../util/assignment");
+const bitwise_1 = require("../../util/bitwise");
 const convertToIndexableExpression_1 = require("../../util/convertToIndexableExpression");
 const createBinaryFromOperator_1 = require("../../util/createBinaryFromOperator");
 const ensureTransformOrder_1 = require("../../util/ensureTransformOrder");
@@ -36,7 +38,7 @@ function transformOptimizedArrayAssignmentPattern(state, assignmentPattern, rhs)
                 luau_ast_1.default.list.push(writes, luau_ast_1.default.tempId());
             }
             else if (typescript_1.default.isSpreadElement(element)) {
-                DiagnosticService_1.DiagnosticService.addDiagnostic(diagnostics_1.errors.noSpreadDestructuring(element));
+                (0, assert_1.assert)(false, "Cannot optimize-assign spread element");
             }
             else {
                 let initializer;
@@ -122,14 +124,19 @@ function transformBinaryExpression(state, node) {
                 }
                 return rightExp;
             }
-            if (luau_ast_1.default.isCall(rightExp) && (0, types_1.isLuaTupleType)(state)(state.getType(node.right))) {
+            if (luau_ast_1.default.isCall(rightExp) &&
+                (0, types_1.isLuaTupleType)(state)(state.getType(node.right)) &&
+                !(0, arrayLikeExpressionContainsSpread_1.arrayLikeExpressionContainsSpread)(node.left)) {
                 transformOptimizedArrayAssignmentPattern(state, node.left, rightExp);
                 if (!(0, isUsedAsStatement_1.isUsedAsStatement)(node)) {
                     DiagnosticService_1.DiagnosticService.addDiagnostic(diagnostics_1.errors.noLuaTupleDestructureAssignmentExpression(node));
                 }
                 return luau_ast_1.default.none();
             }
-            if (luau_ast_1.default.isArray(rightExp) && !luau_ast_1.default.list.isEmpty(rightExp.members) && (0, isUsedAsStatement_1.isUsedAsStatement)(node)) {
+            if (luau_ast_1.default.isArray(rightExp) &&
+                !luau_ast_1.default.list.isEmpty(rightExp.members) &&
+                (0, isUsedAsStatement_1.isUsedAsStatement)(node) &&
+                !(0, arrayLikeExpressionContainsSpread_1.arrayLikeExpressionContainsSpread)(node.left)) {
                 transformOptimizedArrayAssignmentPattern(state, node.left, rightExp.members);
                 return luau_ast_1.default.none();
             }
@@ -159,6 +166,9 @@ function transformBinaryExpression(state, node) {
         else {
             return (0, assignment_1.createCompoundAssignmentExpression)(state, node, writable, writableType, readable, operatorKind, value, valueType);
         }
+    }
+    if ((0, bitwise_1.isBitwiseOperator)(operatorKind)) {
+        return (0, bitwise_1.createBitwiseFromOperator)(state, operatorKind, node);
     }
     const [left, right] = (0, ensureTransformOrder_1.ensureTransformOrder)(state, [node.left, node.right]);
     if (operatorKind === typescript_1.default.SyntaxKind.InKeyword) {

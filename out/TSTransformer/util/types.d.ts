@@ -14,6 +14,7 @@ export declare function isStringType(type: ts.Type): boolean;
 export declare function isArrayType(state: TransformState): TypeCheck;
 export declare function isSetType(state: TransformState): TypeCheck;
 export declare function isMapType(state: TransformState): TypeCheck;
+export declare function isSharedTableType(state: TransformState): TypeCheck;
 export declare function isGeneratorType(state: TransformState): TypeCheck;
 export declare function isIterableFunctionType(state: TransformState): TypeCheck;
 export declare function isLuaTupleType(state: TransformState): TypeCheck;

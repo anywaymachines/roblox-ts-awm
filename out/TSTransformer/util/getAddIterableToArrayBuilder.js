@@ -226,7 +226,7 @@ function getAddIterableToArrayBuilder(state, node, type) {
     else if ((0, types_1.isDefinitelyType)(type, (0, types_1.isSetType)(state))) {
         return addSet;
     }
-    else if ((0, types_1.isDefinitelyType)(type, (0, types_1.isMapType)(state))) {
+    else if ((0, types_1.isDefinitelyType)(type, (0, types_1.isMapType)(state)) || (0, types_1.isDefinitelyType)(type, (0, types_1.isSharedTableType)(state))) {
         return addMap;
     }
     else if ((0, types_1.isDefinitelyType)(type, (0, types_1.isIterableFunctionLuaTupleType)(state))) {

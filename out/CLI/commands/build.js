@@ -20,7 +20,6 @@ const LoggableError_1 = require("../../Shared/errors/LoggableError");
 const getRootDirs_1 = require("../../Shared/util/getRootDirs");
 const hasErrors_1 = require("../../Shared/util/hasErrors");
 const typescript_1 = __importDefault(require("typescript"));
-const yargs_1 = __importDefault(require("yargs"));
 function getTsConfigProjectOptions(tsConfigPath) {
     if (tsConfigPath !== undefined) {
         const rawJson = typescript_1.default.sys.readFile(tsConfigPath);
@@ -42,7 +41,7 @@ function findTsConfigPath(projectPath) {
 module.exports = typescript_1.default.identity({
     command: ["$0", "build"],
     describe: "Build a project",
-    builder: () => yargs_1.default
+    builder: (parser) => parser
         .option("project", {
         alias: "p",
         string: true,

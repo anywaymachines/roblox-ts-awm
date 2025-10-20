@@ -29,13 +29,14 @@ function isTupleMacro(state, expression) {
 function transformReturnStatementInner(state, returnExp) {
     const result = luau_ast_1.default.list.make();
     let expression;
-    if (typescript_1.default.isCallExpression(returnExp) && isTupleMacro(state, returnExp)) {
-        const [args, prereqs] = state.capture(() => (0, ensureTransformOrder_1.ensureTransformOrder)(state, returnExp.arguments));
+    const innerReturnExp = (0, traversal_1.skipDownwards)(returnExp);
+    if (typescript_1.default.isCallExpression(innerReturnExp) && isTupleMacro(state, innerReturnExp)) {
+        const [args, prereqs] = state.capture(() => (0, ensureTransformOrder_1.ensureTransformOrder)(state, innerReturnExp.arguments));
         luau_ast_1.default.list.pushList(result, prereqs);
         expression = luau_ast_1.default.list.make(...args);
     }
     else {
-        expression = (0, transformExpression_1.transformExpression)(state, (0, traversal_1.skipDownwards)(returnExp));
+        expression = (0, transformExpression_1.transformExpression)(state, innerReturnExp);
         if ((0, types_1.isLuaTupleType)(state)(state.getType(returnExp)) && !isTupleReturningCall(state, returnExp, expression)) {
             if (luau_ast_1.default.isArray(expression)) {
                 expression = expression.members;

@@ -16,6 +16,7 @@ exports.isStringType = isStringType;
 exports.isArrayType = isArrayType;
 exports.isSetType = isSetType;
 exports.isMapType = isMapType;
+exports.isSharedTableType = isSharedTableType;
 exports.isGeneratorType = isGeneratorType;
 exports.isIterableFunctionType = isIterableFunctionType;
 exports.isLuaTupleType = isLuaTupleType;
@@ -154,6 +155,9 @@ function isMapType(state) {
     return type => type.symbol === state.services.macroManager.getSymbolOrThrow(TSTransformer_1.SYMBOL_NAMES.Map) ||
         type.symbol === state.services.macroManager.getSymbolOrThrow(TSTransformer_1.SYMBOL_NAMES.ReadonlyMap) ||
         type.symbol === state.services.macroManager.getSymbolOrThrow(TSTransformer_1.SYMBOL_NAMES.WeakMap);
+}
+function isSharedTableType(state) {
+    return type => type.symbol === state.services.macroManager.getSymbolOrThrow(TSTransformer_1.SYMBOL_NAMES.SharedTable);
 }
 function isGeneratorType(state) {
     return type => type.symbol === state.services.macroManager.getSymbolOrThrow(TSTransformer_1.SYMBOL_NAMES.Generator);

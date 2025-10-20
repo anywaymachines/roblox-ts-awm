@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.createBinaryFromOperator = createBinaryFromOperator;
 const luau_ast_1 = __importDefault(require("@roblox-ts/luau-ast"));
 const assert_1 = require("../../Shared/util/assert");
+const bitwise_1 = require("./bitwise");
 const getKindName_1 = require("./getKindName");
 const types_1 = require("./types");
 const wrapExpressionStatement_1 = require("./wrapExpressionStatement");
@@ -22,20 +23,6 @@ const OPERATOR_MAP = new Map([
     [typescript_1.default.SyntaxKind.SlashToken, "/"],
     [typescript_1.default.SyntaxKind.AsteriskAsteriskToken, "^"],
     [typescript_1.default.SyntaxKind.PercentToken, "%"],
-]);
-const BITWISE_OPERATOR_MAP = new Map([
-    [typescript_1.default.SyntaxKind.AmpersandToken, "band"],
-    [typescript_1.default.SyntaxKind.BarToken, "bor"],
-    [typescript_1.default.SyntaxKind.CaretToken, "bxor"],
-    [typescript_1.default.SyntaxKind.LessThanLessThanToken, "lshift"],
-    [typescript_1.default.SyntaxKind.GreaterThanGreaterThanGreaterThanToken, "rshift"],
-    [typescript_1.default.SyntaxKind.GreaterThanGreaterThanToken, "arshift"],
-    [typescript_1.default.SyntaxKind.AmpersandEqualsToken, "band"],
-    [typescript_1.default.SyntaxKind.BarEqualsToken, "bor"],
-    [typescript_1.default.SyntaxKind.CaretEqualsToken, "bxor"],
-    [typescript_1.default.SyntaxKind.LessThanLessThanEqualsToken, "lshift"],
-    [typescript_1.default.SyntaxKind.GreaterThanGreaterThanGreaterThanEqualsToken, "rshift"],
-    [typescript_1.default.SyntaxKind.GreaterThanGreaterThanEqualsToken, "arshift"],
 ]);
 function createBinaryAdd(left, leftType, right, rightType) {
     const leftIsString = (0, types_1.isDefinitelyType)(leftType, types_1.isStringType);
@@ -55,9 +42,8 @@ function createBinaryFromOperator(state, node, left, leftType, operatorKind, rig
     if (operatorKind === typescript_1.default.SyntaxKind.PlusToken || operatorKind === typescript_1.default.SyntaxKind.PlusEqualsToken) {
         return createBinaryAdd(left, leftType, right, rightType);
     }
-    const bit32Name = BITWISE_OPERATOR_MAP.get(operatorKind);
-    if (bit32Name !== undefined) {
-        return luau_ast_1.default.call(luau_ast_1.default.property(luau_ast_1.default.globals.bit32, bit32Name), [left, right]);
+    if ((0, bitwise_1.isBitwiseOperator)(operatorKind)) {
+        return (0, bitwise_1.createBitwiseCall)(operatorKind, [left, right]);
     }
     if (operatorKind === typescript_1.default.SyntaxKind.CommaToken) {
         state.prereqList((0, wrapExpressionStatement_1.wrapExpressionStatement)(left));

@@ -5,12 +5,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.transformParameters = transformParameters;
 const luau_ast_1 = __importDefault(require("@roblox-ts/luau-ast"));
-const diagnostics_1 = require("../../Shared/diagnostics");
-const DiagnosticService_1 = require("../classes/DiagnosticService");
 const transformArrayBindingPattern_1 = require("./binding/transformArrayBindingPattern");
 const transformObjectBindingPattern_1 = require("./binding/transformObjectBindingPattern");
 const transformIdentifier_1 = require("./expressions/transformIdentifier");
 const transformInitializer_1 = require("./transformInitializer");
+const arrayLikeExpressionContainsSpread_1 = require("../util/arrayLikeExpressionContainsSpread");
 const isMethod_1 = require("../util/isMethod");
 const validateIdentifier_1 = require("../util/validateIdentifier");
 const typescript_1 = __importDefault(require("typescript"));
@@ -20,10 +19,6 @@ function optimizeArraySpreadParameter(state, parameters, bindingPattern) {
             luau_ast_1.default.list.push(parameters, luau_ast_1.default.tempId());
         }
         else {
-            if (element.dotDotDotToken) {
-                DiagnosticService_1.DiagnosticService.addDiagnostic(diagnostics_1.errors.noSpreadDestructuring(element));
-                return;
-            }
             const name = element.name;
             if (typescript_1.default.isIdentifier(name)) {
                 const paramId = (0, transformIdentifier_1.transformIdentifierDefined)(state, name);
@@ -60,7 +55,9 @@ function transformParameters(state, node) {
         if (typescript_1.default.isThisIdentifier(parameter.name)) {
             continue;
         }
-        if (parameter.dotDotDotToken && typescript_1.default.isArrayBindingPattern(parameter.name)) {
+        if (parameter.dotDotDotToken &&
+            typescript_1.default.isArrayBindingPattern(parameter.name) &&
+            !(0, arrayLikeExpressionContainsSpread_1.arrayLikeExpressionContainsSpread)(parameter.name)) {
             const prereqs = state.capturePrereqs(() => optimizeArraySpreadParameter(state, parameters, parameter.name));
             luau_ast_1.default.list.pushList(statements, prereqs);
             continue;

@@ -4,7 +4,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const fs_extra_1 = __importDefault(require("fs-extra"));
-const mocha_1 = require("mocha");
 const path_1 = __importDefault(require("path"));
 const compileFiles_1 = require("../Project/functions/compileFiles");
 const copyFiles_1 = require("../Project/functions/copyFiles");
@@ -20,7 +19,7 @@ const formatDiagnostics_1 = require("../Shared/util/formatDiagnostics");
 const getRootDirs_1 = require("../Shared/util/getRootDirs");
 const isPathDescendantOf_1 = require("../Shared/util/isPathDescendantOf");
 const DIAGNOSTIC_TEST_NAME_REGEX = /^(\w+)(?:\.\d+)?$/;
-(0, mocha_1.describe)("should compile tests project", () => {
+describe("should compile tests project", () => {
     var _a;
     const data = (0, createProjectData_1.createProjectData)(path_1.default.join(constants_1.PACKAGE_ROOT, "tests", "tsconfig.json"), Object.assign({}, constants_1.DEFAULT_PROJECT_OPTIONS, {
         project: "",
@@ -45,7 +44,9 @@ const DIAGNOSTIC_TEST_NAME_REGEX = /^(\w+)(?:\.\d+)?$/;
             (0, assert_1.assert)(diagnosticName && diagnostics_1.errors[diagnosticName], `Diagnostic test for unknown diagnostic ${fileBaseName}`);
             const expectedId = diagnostics_1.errors[diagnosticName].id;
             it(`should compile ${fileName} and report diagnostic ${diagnosticName}`, done => {
+                process.env.ROBLOX_TS_EXPECTED_DIAGNOSTIC_ID = String(expectedId);
                 const emitResult = (0, compileFiles_1.compileFiles)(program.getProgram(), data, pathTranslator, [sourceFile]);
+                delete process.env.ROBLOX_TS_EXPECTED_DIAGNOSTIC_ID;
                 if (emitResult.diagnostics.length > 0 &&
                     emitResult.diagnostics.every(d => (0, diagnostics_1.getDiagnosticId)(d) === expectedId)) {
                     done();

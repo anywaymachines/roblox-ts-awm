@@ -19,7 +19,8 @@ function diagnostic(category, ...messages) {
 }
 function diagnosticWithContext(category, contextFormatter, ...messages) {
     const result = (node, ...context) => {
-        if (category === typescript_1.default.DiagnosticCategory.Error) {
+        if (category === typescript_1.default.DiagnosticCategory.Error &&
+            process.env.ROBLOX_TS_EXPECTED_DIAGNOSTIC_ID !== String(result.id)) {
             debugger;
         }
         if (contextFormatter) {
@@ -72,7 +73,6 @@ exports.errors = {
     noExclamationEquals: error("operator `!=` is not supported!", suggestion("Use `!==` instead.")),
     noEnumMerging: error("Enum merging is not supported!"),
     noNamespaceMerging: error("Namespace merging is not supported!"),
-    noSpreadDestructuring: error("Operator `...` is not supported for destructuring!"),
     noFunctionExpressionName: error("Function expression names are not supported!"),
     noPrecedingSpreadElement: error("Spread element must come last in a list of arguments!"),
     noLuaTupleDestructureAssignmentExpression: error("Cannot destructure LuaTuple<T> expression outside of an ExpressionStatement!"),
@@ -81,6 +81,8 @@ exports.errors = {
     noArguments: error("`arguments` is not supported!"),
     noPrototype: error("`prototype` is not supported!"),
     noRobloxSymbolInstanceof: error("The `instanceof` operator can only be used on roblox-ts classes!", suggestion('Use `typeIs(myThing, "TypeToCheck") instead')),
+    noNestedSpreadsInAssignmentPatterns: error("Nesting spreads in assignment patterns is not supported!"),
+    noRestSpreadingOfRobloxTypes: error("Operator `...` is not allowed on Roblox types!"),
     noNonNumberStringRelationOperator: error("Relation operators can only be used on number or string types!"),
     noInstanceMethodCollisions: error("Static methods cannot use the same name as instance methods!"),
     noStaticMethodCollisions: error("Instance methods cannot use the same name as static methods!"),

@@ -20,6 +20,7 @@ export declare const SYMBOL_NAMES: {
     readonly ReadonlySet: "ReadonlySet";
     readonly ReadVoxelsArray: "ReadVoxelsArray";
     readonly Set: "Set";
+    readonly SharedTable: "SharedTable";
     readonly String: "String";
     readonly TemplateStringsArray: "TemplateStringsArray";
     readonly WeakMap: "WeakMap";

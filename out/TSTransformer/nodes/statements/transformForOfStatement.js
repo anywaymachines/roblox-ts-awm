@@ -102,9 +102,6 @@ function transformInLineArrayBindingPattern(state, pattern, ids, initializers) {
         if (typescript_1.default.isOmittedExpression(element)) {
             luau_ast_1.default.list.push(ids, luau_ast_1.default.tempId());
         }
-        else if (typescript_1.default.isSpreadElement(element)) {
-            DiagnosticService_1.DiagnosticService.addDiagnostic(diagnostics_1.errors.noSpreadDestructuring(element));
-        }
         else {
             const id = (0, transformBindingName_1.transformBindingName)(state, element.name, initializers);
             if (element.initializer) {
@@ -119,9 +116,6 @@ function transformInLineArrayAssignmentPattern(state, assignmentPattern, ids, in
         for (let element of assignmentPattern.elements) {
             if (typescript_1.default.isOmittedExpression(element)) {
                 luau_ast_1.default.list.push(ids, luau_ast_1.default.tempId());
-            }
-            else if (typescript_1.default.isSpreadElement(element)) {
-                DiagnosticService_1.DiagnosticService.addDiagnostic(diagnostics_1.errors.noSpreadDestructuring(element));
             }
             else {
                 let initializer;
@@ -303,7 +297,7 @@ function getLoopBuilder(state, node, type) {
     else if ((0, types_1.isDefinitelyType)(type, (0, types_1.isSetType)(state))) {
         return buildSetLoop;
     }
-    else if ((0, types_1.isDefinitelyType)(type, (0, types_1.isMapType)(state))) {
+    else if ((0, types_1.isDefinitelyType)(type, (0, types_1.isMapType)(state)) || (0, types_1.isDefinitelyType)(type, (0, types_1.isSharedTableType)(state))) {
         return buildMapLoop;
     }
     else if ((0, types_1.isDefinitelyType)(type, types_1.isStringType)) {

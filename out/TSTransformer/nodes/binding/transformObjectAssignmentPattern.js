@@ -13,13 +13,16 @@ const transformInitializer_1 = require("../transformInitializer");
 const transformWritable_1 = require("../transformWritable");
 const objectAccessor_1 = require("../../util/binding/objectAccessor");
 const getKindName_1 = require("../../util/getKindName");
+const spreadDestructuring_1 = require("../../util/spreadDestructuring");
 const traversal_1 = require("../../util/traversal");
 const typescript_1 = __importDefault(require("typescript"));
 function transformObjectAssignmentPattern(state, assignmentPattern, parentId) {
+    const preSpreadNames = new Array();
     for (const property of assignmentPattern.properties) {
         if (typescript_1.default.isShorthandPropertyAssignment(property)) {
             const name = property.name;
             const value = (0, objectAccessor_1.objectAccessor)(state, parentId, state.typeChecker.getTypeOfAssignmentPattern(assignmentPattern), name);
+            preSpreadNames.push(value);
             const id = (0, transformWritable_1.transformWritableExpression)(state, name, property.objectAssignmentInitializer !== undefined);
             state.prereq(luau_ast_1.default.create(luau_ast_1.default.SyntaxKind.Assignment, {
                 left: id,
@@ -32,8 +35,19 @@ function transformObjectAssignmentPattern(state, assignmentPattern, parentId) {
             }
         }
         else if (typescript_1.default.isSpreadAssignment(property)) {
-            DiagnosticService_1.DiagnosticService.addDiagnostic(diagnostics_1.errors.noSpreadDestructuring(property));
-            return;
+            const value = (0, spreadDestructuring_1.spreadDestructureObject)(state, parentId, preSpreadNames);
+            const expression = property.expression;
+            if (typescript_1.default.isObjectLiteralExpression(expression) || typescript_1.default.isArrayLiteralExpression(expression)) {
+                DiagnosticService_1.DiagnosticService.addDiagnostic(diagnostics_1.errors.noNestedSpreadsInAssignmentPatterns(property));
+                continue;
+            }
+            (0, assert_1.assert)(typescript_1.default.isIdentifier(expression), "transformObjectAssignmentPattern unexpected expression type: " + (0, getKindName_1.getKindName)(expression.kind));
+            const id = (0, transformWritable_1.transformWritableExpression)(state, expression, true);
+            state.prereq(luau_ast_1.default.create(luau_ast_1.default.SyntaxKind.Assignment, {
+                left: id,
+                operator: "=",
+                right: value,
+            }));
         }
         else if (typescript_1.default.isPropertyAssignment(property)) {
             const name = property.name;
@@ -44,6 +58,7 @@ function transformObjectAssignmentPattern(state, assignmentPattern, parentId) {
                 init = (0, traversal_1.skipDownwards)(property.initializer.left);
             }
             const value = (0, objectAccessor_1.objectAccessor)(state, parentId, state.typeChecker.getTypeOfAssignmentPattern(assignmentPattern), name);
+            preSpreadNames.push(value);
             if (typescript_1.default.isIdentifier(init) || typescript_1.default.isElementAccessExpression(init) || typescript_1.default.isPropertyAccessExpression(init)) {
                 const id = (0, transformWritable_1.transformWritableExpression)(state, init, initializer !== undefined);
                 state.prereq(luau_ast_1.default.create(luau_ast_1.default.SyntaxKind.Assignment, {

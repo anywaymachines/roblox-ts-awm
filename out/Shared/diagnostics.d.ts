@@ -27,7 +27,6 @@ export declare const errors: {
     noExclamationEquals: DiagnosticFactory<[]>;
     noEnumMerging: DiagnosticFactory<[]>;
     noNamespaceMerging: DiagnosticFactory<[]>;
-    noSpreadDestructuring: DiagnosticFactory<[]>;
     noFunctionExpressionName: DiagnosticFactory<[]>;
     noPrecedingSpreadElement: DiagnosticFactory<[]>;
     noLuaTupleDestructureAssignmentExpression: DiagnosticFactory<[]>;
@@ -36,6 +35,8 @@ export declare const errors: {
     noArguments: DiagnosticFactory<[]>;
     noPrototype: DiagnosticFactory<[]>;
     noRobloxSymbolInstanceof: DiagnosticFactory<[]>;
+    noNestedSpreadsInAssignmentPatterns: DiagnosticFactory<[]>;
+    noRestSpreadingOfRobloxTypes: DiagnosticFactory<[]>;
     noNonNumberStringRelationOperator: DiagnosticFactory<[]>;
     noInstanceMethodCollisions: DiagnosticFactory<[]>;
     noStaticMethodCollisions: DiagnosticFactory<[]>;
