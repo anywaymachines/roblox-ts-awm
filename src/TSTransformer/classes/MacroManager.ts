@@ -38,6 +38,7 @@ export const SYMBOL_NAMES = {
 	ReadonlySet: "ReadonlySet",
 	ReadVoxelsArray: "ReadVoxelsArray",
 	Set: "Set",
+	SharedTable: "SharedTable",
 	String: "String",
 	TemplateStringsArray: "TemplateStringsArray",
 	WeakMap: "WeakMap",
